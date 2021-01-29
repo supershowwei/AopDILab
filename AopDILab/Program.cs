@@ -21,6 +21,7 @@ namespace AopDILab
             //Console.Read();
 
             var summary = BenchmarkRunner.Run<MyServiceBenchmark>();
+            //var summary = BenchmarkRunner.Run<SetterLabBenchmark>();
         }
     }
 
@@ -35,10 +36,16 @@ namespace AopDILab
             this.myService = AutofacConfig.Container.Resolve<IMyService>();
         }
 
+        //[Benchmark]
+        //public void InjectDirectly()
+        //{
+        //    var myData = this.myService.GetMyData_InjectDirectly();
+        //}
+
         [Benchmark]
-        public void InjectDirectly()
+        public void InjectInnerDelegate()
         {
-            var myData = this.myService.GetMyData_InjectDirectly();
+            var myData = this.myService.GetMyData_InnerDelegate();
         }
 
         [Benchmark]
@@ -47,16 +54,38 @@ namespace AopDILab
             var myData = this.myService.GetMyData_Delegate();
         }
 
-        [Benchmark]
-        public void Reflection()
+        //[Benchmark]
+        //public void Reflection()
+        //{
+        //    var myData = this.myService.GetMyData_Reflection();
+        //}
+
+        //[Benchmark]
+        //public void DynamicInvoke()
+        //{
+        //    var myData = this.myService.GetMyData_DynamicInvoke();
+        //}
+    }
+
+    public class SetterLabBenchmark
+    {
+        private readonly SetterLab setterLafb;
+
+        public SetterLabBenchmark()
         {
-            var myData = this.myService.GetMyData_Reflection();
+            this.setterLafb = new SetterLab();
         }
 
         [Benchmark]
-        public void DynamicInvoke()
+        public void SetMyDataDirectly()
         {
-            var myData = this.myService.GetMyData_DynamicInvoke();
+            this.setterLafb.SetMyDataDirectly();
+        }
+
+        [Benchmark]
+        public void SetMyDataDynamic()
+        {
+            this.setterLafb.SetMyDataDynamic();
         }
     }
 }

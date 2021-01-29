@@ -14,6 +14,7 @@ namespace AopDILab
     public class DependencyInjectionAspectAttribute : Attribute
     {
         private static readonly ConcurrentDictionary<string, Action<object>> InjectMethods = new ConcurrentDictionary<string, Action<object>>();
+        private static readonly ConcurrentDictionary<string, Type[]> InjectTypes = new ConcurrentDictionary<string, Type[]>();
         private static readonly ConcurrentDictionary<Type, Dictionary<Type, FieldInfo>> InstanceFields = new ConcurrentDictionary<Type, Dictionary<Type, FieldInfo>>();
         private static readonly MethodInfo ResolveMethod = typeof(ResolutionExtensions).GetMethod("Resolve", new[] { typeof(IComponentContext) });
 
@@ -26,7 +27,9 @@ namespace AopDILab
                 instanceType,
                 type => type.GetFields(BindingFlags.NonPublic | BindingFlags.Instance).ToDictionary(fi => fi.FieldType, fi => fi));
 
-            var injectedTypes = method.GetCustomAttribute<DependencyInjectAttribute>()?.Types;
+            var injectedTypes = InjectTypes.GetOrAdd(
+                $"{instanceType.FullName}.{method.Name}",
+                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types);
 
             //if (injectedTypes == null) throw new ArgumentNullException("injectedTypes");
             //if (injectedTypes.Length == 0) throw new ArgumentException("Empty injected types", "injectedTypes");
@@ -35,11 +38,11 @@ namespace AopDILab
             {
                 var field = privateFields[injectedType];
 
-                var injectMethodName = $"Inject_{field.Name}_On_{instanceType.Name}";
+                var injectMethodName = $"Inject_{field.Name}";
 
                 var inject = InjectMethods.GetOrAdd(
                     injectMethodName,
-                    methodName =>
+                    name =>
                         {
                             var lifetimeScopeField = privateFields[typeof(ILifetimeScope)];
 
@@ -49,20 +52,20 @@ namespace AopDILab
 
                             var genericResolveMethod = ResolveMethod.MakeGenericMethod(injectedType);
 
-                            var injectMethod = new DynamicMethod(injectMethodName, null, new[] { typeof(object) }, true);
+                            var injectMethod = new DynamicMethod(injectMethodName, null, new[] { typeof(object) }, instanceType, true);
                             var ilGenerator = injectMethod.GetILGenerator();
 
                             var lifetimeScopeLocalVariable = ilGenerator.DeclareLocal(lifetimeScopeField.FieldType);
 
                             ilGenerator.Emit(OpCodes.Ldarg_0);
                             ilGenerator.Emit(OpCodes.Ldfld, lifetimeScopeField);
-                            ilGenerator.Emit(OpCodes.Stloc, lifetimeScopeLocalVariable);
+                            ilGenerator.Emit(OpCodes.Stloc_0, lifetimeScopeLocalVariable);
                             ilGenerator.Emit(OpCodes.Ldarg_0);
-                            ilGenerator.Emit(OpCodes.Ldloc, lifetimeScopeLocalVariable);
+                            ilGenerator.Emit(OpCodes.Ldloc_0, lifetimeScopeLocalVariable);
                             ilGenerator.Emit(OpCodes.Call, genericResolveMethod);
                             ilGenerator.Emit(OpCodes.Stfld, field);
                             ilGenerator.Emit(OpCodes.Ret);
-                            
+
                             return injectMethod.CreateDelegate(typeof(Action<object>)) as Action<object>;
                         });
 
@@ -76,6 +79,7 @@ namespace AopDILab
     public class DependencyInjectionDynamicInvokeAspectAttribute : Attribute
     {
         private static readonly ConcurrentDictionary<string, Delegate> InjectMethods = new ConcurrentDictionary<string, Delegate>();
+        private static readonly ConcurrentDictionary<string, Type[]> InjectTypes = new ConcurrentDictionary<string, Type[]>();
         private static readonly ConcurrentDictionary<Type, Dictionary<Type, FieldInfo>> InstanceFields = new ConcurrentDictionary<Type, Dictionary<Type, FieldInfo>>();
         private static readonly MethodInfo ResolveMethod = typeof(ResolutionExtensions).GetMethod("Resolve", new[] { typeof(IComponentContext) });
 
@@ -88,7 +92,9 @@ namespace AopDILab
                 instanceType,
                 type => type.GetFields(BindingFlags.NonPublic | BindingFlags.Instance).ToDictionary(fi => fi.FieldType, fi => fi));
 
-            var injectedTypes = method.GetCustomAttribute<DependencyInjectAttribute>()?.Types;
+            var injectedTypes = InjectTypes.GetOrAdd(
+                $"{instanceType.FullName}.{method.Name}",
+                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types);
 
             //if (injectedTypes == null) throw new ArgumentNullException("injectedTypes");
             //if (injectedTypes.Length == 0) throw new ArgumentException("Empty injected types", "injectedTypes");
@@ -97,11 +103,12 @@ namespace AopDILab
             {
                 var field = privateFields[injectedType];
 
-                var injectMethodName = $"Inject_{field.Name}_DynamicInvoke_On_{instanceType.Name}";
+                var injectMethodName = $"Inject_{field.Name}_DynamicInvoke";
 
                 var inject = InjectMethods.GetOrAdd(
                     injectMethodName,
-                    methodName =>
+                    name
+                    =>
                         {
                             var lifetimeScopeField = privateFields[typeof(ILifetimeScope)];
 
@@ -111,7 +118,7 @@ namespace AopDILab
 
                             var genericResolveMethod = ResolveMethod.MakeGenericMethod(injectedType);
 
-                            var injectMethod = new DynamicMethod(injectMethodName, null, new[] { instanceType }, true);
+                            var injectMethod = new DynamicMethod(injectMethodName, null, new[] { instanceType }, instanceType, true);
                             var ilGenerator = injectMethod.GetILGenerator();
 
                             var lifetimeScopeLocalVariable = ilGenerator.DeclareLocal(lifetimeScopeField.FieldType);
@@ -138,6 +145,7 @@ namespace AopDILab
     public class DependencyInjectionReflectionAspectAttribute : Attribute
     {
         private static readonly ConcurrentDictionary<Type, Dictionary<Type, FieldInfo>> InstanceFields = new ConcurrentDictionary<Type, Dictionary<Type, FieldInfo>>();
+        private static readonly ConcurrentDictionary<string, Type[]> InjectTypes = new ConcurrentDictionary<string, Type[]>();
 
         [Advice(Kind.Before, Targets = Target.Method)]
         public void Before([Argument(Source.Metadata)] MethodBase method, [Argument(Source.Instance)] object instance)
@@ -150,7 +158,9 @@ namespace AopDILab
 
             var lifetimeScope = privateFields[typeof(ILifetimeScope)].GetValue(instance) as ILifetimeScope;
 
-            var injectedTypes = method.GetCustomAttribute<DependencyInjectAttribute>()?.Types;
+            var injectedTypes = InjectTypes.GetOrAdd(
+                $"{instanceType.FullName}.{method.Name}",
+                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types);
 
             foreach (var injectedType in injectedTypes)
             {
