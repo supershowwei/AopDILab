@@ -6,6 +6,7 @@ namespace AopDILab
 {
     public class SetterLab
     {
+        private static readonly FieldInfo MyDataField = typeof(SetterLab).GetField("myData", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly Action<MyData, object> MyDataSetter = BuildMyDataSetter();
         private MyData myData;
 
@@ -14,25 +15,24 @@ namespace AopDILab
             this.myData = new MyData();
         }
 
-        public void SetMyDataDynamic()
+        public void SetMyDataByILCode()
         {
             MyDataSetter(new MyData(), this);
         }
 
+        public void SetMyDataByReflection()
+        {
+            MyDataField.SetValue(this, new MyData());
+        }
+
         private static Action<MyData, object> BuildMyDataSetter()
         {
-            var setterMethod = new DynamicMethod("Set_MyData_Dynamic", null, new[] { typeof(MyData), typeof(object) }, typeof(SetterLab), true);
+            var setterMethod = new DynamicMethod("Set_MyData_By_ILCode", null, new[] { typeof(MyData), typeof(object) }, typeof(SetterLab), true);
             var ilGenerator = setterMethod.GetILGenerator();
 
-            var instanceLocalVariable = ilGenerator.DeclareLocal(typeof(SetterLab));
-
-            var myDataField = typeof(SetterLab).GetField("myData", BindingFlags.NonPublic | BindingFlags.Instance);
-
             ilGenerator.Emit(OpCodes.Ldarg_1);
-            ilGenerator.Emit(OpCodes.Stloc_0, instanceLocalVariable);
-            ilGenerator.Emit(OpCodes.Ldloc_0, instanceLocalVariable);
             ilGenerator.Emit(OpCodes.Ldarg_0);
-            ilGenerator.Emit(OpCodes.Stfld, myDataField);
+            ilGenerator.Emit(OpCodes.Stfld, MyDataField);
             ilGenerator.Emit(OpCodes.Ret);
 
             return setterMethod.CreateDelegate(typeof(Action<MyData, object>)) as Action<MyData, object>;

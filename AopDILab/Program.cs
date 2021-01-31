@@ -42,11 +42,11 @@ namespace AopDILab
         //    var myData = this.myService.GetMyData_InjectDirectly();
         //}
 
-        [Benchmark]
-        public void InjectInnerDelegate()
-        {
-            var myData = this.myService.GetMyData_InnerDelegate();
-        }
+        //[Benchmark]
+        //public void InjectInnerDelegate()
+        //{
+        //    var myData = this.myService.GetMyData_InnerDelegate();
+        //}
 
         [Benchmark]
         public void Delegate()
@@ -54,11 +54,11 @@ namespace AopDILab
             var myData = this.myService.GetMyData_Delegate();
         }
 
-        //[Benchmark]
-        //public void Reflection()
-        //{
-        //    var myData = this.myService.GetMyData_Reflection();
-        //}
+        [Benchmark]
+        public void Reflection()
+        {
+            var myData = this.myService.GetMyData_Reflection();
+        }
 
         //[Benchmark]
         //public void DynamicInvoke()
@@ -83,9 +83,15 @@ namespace AopDILab
         }
 
         [Benchmark]
-        public void SetMyDataDynamic()
+        public void SetMyDataByILCode()
         {
-            this.setterLafb.SetMyDataDynamic();
+            this.setterLafb.SetMyDataByILCode();
+        }
+
+        [Benchmark]
+        public void SetMyDataByReflection()
+        {
+            this.setterLafb.SetMyDataByReflection();
         }
     }
 }

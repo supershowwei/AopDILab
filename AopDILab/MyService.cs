@@ -77,7 +77,7 @@ namespace AopDILab
         {
             var a = this;
             var b = a.lifetimeScope;
-            a.myDataAccess = b.Resolve<IMyDataAccess>();
+            a.myDataAccess = a.lifetimeScope.Resolve<IMyDataAccess>();
             a.myIdDataAccess = b.Resolve<IMyIdDataAccess>();
         }
 

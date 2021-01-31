@@ -29,7 +29,7 @@ namespace AopDILab
 
             var injectedTypes = InjectTypes.GetOrAdd(
                 $"{instanceType.FullName}.{method.Name}",
-                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types);
+                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types ?? new Type[] { });
 
             //if (injectedTypes == null) throw new ArgumentNullException("injectedTypes");
             //if (injectedTypes.Length == 0) throw new ArgumentException("Empty injected types", "injectedTypes");
@@ -55,13 +55,9 @@ namespace AopDILab
                             var injectMethod = new DynamicMethod(injectMethodName, null, new[] { typeof(object) }, instanceType, true);
                             var ilGenerator = injectMethod.GetILGenerator();
 
-                            var lifetimeScopeLocalVariable = ilGenerator.DeclareLocal(lifetimeScopeField.FieldType);
-
+                            ilGenerator.Emit(OpCodes.Ldarg_0);
                             ilGenerator.Emit(OpCodes.Ldarg_0);
                             ilGenerator.Emit(OpCodes.Ldfld, lifetimeScopeField);
-                            ilGenerator.Emit(OpCodes.Stloc_0, lifetimeScopeLocalVariable);
-                            ilGenerator.Emit(OpCodes.Ldarg_0);
-                            ilGenerator.Emit(OpCodes.Ldloc_0, lifetimeScopeLocalVariable);
                             ilGenerator.Emit(OpCodes.Call, genericResolveMethod);
                             ilGenerator.Emit(OpCodes.Stfld, field);
                             ilGenerator.Emit(OpCodes.Ret);
@@ -94,7 +90,7 @@ namespace AopDILab
 
             var injectedTypes = InjectTypes.GetOrAdd(
                 $"{instanceType.FullName}.{method.Name}",
-                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types);
+                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types ?? new Type[] { });
 
             //if (injectedTypes == null) throw new ArgumentNullException("injectedTypes");
             //if (injectedTypes.Length == 0) throw new ArgumentException("Empty injected types", "injectedTypes");
@@ -160,7 +156,7 @@ namespace AopDILab
 
             var injectedTypes = InjectTypes.GetOrAdd(
                 $"{instanceType.FullName}.{method.Name}",
-                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types);
+                name => method.GetCustomAttribute<DependencyInjectAttribute>()?.Types ?? new Type[] { });
 
             foreach (var injectedType in injectedTypes)
             {
